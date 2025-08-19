@@ -111,6 +111,17 @@ local UnitFrame_OnClick = function()
   if not this.unitstr then return end
   local button = arg1
 
+  -- FIRST: Let Clique handle the click if it's available and has bindings
+  if Clique and Clique.OnClick then
+    -- Call Clique's OnClick handler first
+    local handled = Clique:OnClick(button, this.unitstr)
+    if handled then
+      -- Clique handled the click, so we're done
+      return
+    end
+  end
+
+  -- If Clique didn't handle it, proceed with default behavior
   -- handle special cases
   if SpellIsTargeting() then
     if button == "LeftButton" then
@@ -162,6 +173,7 @@ local CreateUnitFrame = function(parent, i)
   frame:SetHeight(parent.config["raid.height"])
 
   frame.unitstr = "raid"..i
+  frame.unit = "raid"..i  -- Add this for Clique compatibility
   frame.left = left
   frame.top = top
   frame.events = {
@@ -178,13 +190,21 @@ local CreateUnitFrame = function(parent, i)
   frame:SetScript("OnEnter", UnitFrame_OnEnter)
   frame:SetScript("OnLeave", UnitFrame_OnLeave)
   frame:SetScript("OnUpdate", UnitFrame_OnUpdate)
-  frame:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
+  
+  -- Register for ALL mouse buttons that Clique might use
+  frame:RegisterForClicks('LeftButtonUp', 'RightButtonUp', 'MiddleButtonUp', 'Button4Up', 'Button5Up')
 
   -- base events
   frame:RegisterEvent("RAID_ROSTER_UPDATE")
   frame:RegisterEvent("PARTY_MEMBERS_CHANGED")
   frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
+  -- Register with Clique if it's available
+  if Clique and Clique.RegisterFrame then
+    Clique:RegisterFrame(frame)
+  end
+
+  -- Rest of your component setup code...
   for id, object in pairs(components) do
     -- create component frames
     object.create(frame)
@@ -470,10 +490,20 @@ module.enable = function(self)
   raid:RegisterEvent("RAID_ROSTER_UPDATE")
   raid:RegisterEvent("PLAYER_ENTERING_WORLD")
   raid:SetScript("OnEvent", function()
-    -- create all raid frames
+     -- create all raid frames
     if not raid.cluster.frames then
       raid.cluster.frames = {}
       for id = 1, 40 do CreateUnitFrame(raid.cluster, id) end
+    end
+
+    -- Register all frames with Clique after they're created
+    if Clique then
+      for id = 1, 40 do
+        local frame = raid.cluster.frames[id]
+        if frame and Clique.RegisterFrame then
+          Clique:RegisterFrame(frame)
+        end
+      end
     end
 
     -- check for raid and setup frames
@@ -608,4 +638,29 @@ module.enable = function(self)
     -- assign default config
     raid.cluster.config = module.config
   end
+end
+
+
+local function RegisterWithClique()
+  if Clique and raid and raid.cluster and raid.cluster.frames then
+    for id = 1, 40 do
+      local frame = raid.cluster.frames[id]
+      if frame and Clique.RegisterFrame then
+        Clique:RegisterFrame(frame)
+      end
+    end
+  end
+end
+
+local cliqueWatcher = CreateFrame("Frame")
+cliqueWatcher:RegisterEvent("ADDON_LOADED")
+cliqueWatcher:SetScript("OnEvent", function()
+  if arg1 == "Clique" then
+    RegisterWithClique()
+  end
+end)
+
+-- Also check if Clique is already loaded
+if Clique then
+  RegisterWithClique()
 end
