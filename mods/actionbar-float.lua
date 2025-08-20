@@ -10,6 +10,11 @@ local module = ShaguTweaks:register({
   enabled = nil,
 })
 
+
+ShaguTweaks_config = ShaguTweaks_config or {}
+ShaguTweaks_config.buttonSpacing = ShaguTweaks_config.buttonSpacing or 8
+local BUTTON_SPACING = ShaguTweaks_config.buttonSpacing
+
 local texture_removals = {
   MainMenuXPBarTexture0, MainMenuXPBarTexture1, MainMenuXPBarTexture2, MainMenuXPBarTexture3,
   ReputationXPBarTexture0, ReputationXPBarTexture1, ReputationXPBarTexture2, ReputationXPBarTexture3,
@@ -38,9 +43,19 @@ module.enable = function(self)
         texture:SetHeight(60)
         texture:SetPoint("CENTER", 0, 0)
         ShaguTweaks.AddBorder(button, 3, { r=.7, g=.7, b=.7, a=1 })
+        
+        -- Adjust button spacing
+        if i > 1 then
+          local prevButton = _G[prefix .. "Button" .. (i - 1)]
+          if prevButton then
+            button:ClearAllPoints()
+            button:SetPoint("LEFT", prevButton, "RIGHT", BUTTON_SPACING, 0)
+          end
+        end
       end
     end
   end
+
 
   ShaguTweaks.AddBorder(MainMenuBarPerformanceBarFrameButton, { -12, -0.5, -8, 4.5 }, { r=.7, g=.7, b=.7, a=1 })
 
@@ -75,5 +90,29 @@ module.enable = function(self)
       texture:SetTexture()
       texture:Hide()
     end
+  end
+end
+
+SLASH_FLOATINGBAR1 = "/barspacing"
+SlashCmdList["FLOATINGBAR"] = function(msg)
+  local spacing = tonumber(msg)
+  if spacing then
+    BUTTON_SPACING = spacing
+    ShaguTweaks_config.buttonSpacing = spacing -- save it permanently
+    print("Floating Actionbar button spacing set to " .. BUTTON_SPACING)
+
+    -- update only button spacing
+    for _, prefix in pairs(actionbars) do
+      for i = 2, NUM_ACTIONBAR_BUTTONS do
+        local button = _G[prefix .. "Button" .. i]
+        local prevButton = _G[prefix .. "Button" .. (i - 1)]
+        if button and prevButton then
+          button:ClearAllPoints()
+          button:SetPoint("LEFT", prevButton, "RIGHT", BUTTON_SPACING, 0)
+        end
+      end
+    end
+  else
+    print("Usage: /barspacing <number>")
   end
 end
