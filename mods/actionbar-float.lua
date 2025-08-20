@@ -24,8 +24,7 @@ local texture_removals = {
 }
 
 local actionbars = {
-  "Action", "BonusAction", "MultiBarBottomLeft", "MultiBarBottomRight",
-  "MultiBarLeft", "MultiBarRight", "Shapeshift"
+  "Action",  "MultiBarBottomLeft", "MultiBarBottomRight",
 }
 
 module.enable = function(self)
